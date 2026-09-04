@@ -1,3 +1,7 @@
+## [2.0.0] - 2026-09-03
+### Added
+- breaking change en firma de la funcion registrar_asistencia para v2.0.0.
+
 ## [1.1.0] - 2026-09-03
 ### Added
 - Acumulador y contador global de asistencias en tiempo de ejecucion.
