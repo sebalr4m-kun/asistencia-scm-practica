@@ -21,3 +21,4 @@
 ## [1.0.0] - 2026-08-01
 ### Added
 - Lanzamiento inicial con validacion basica de DNI.
+- Prueba version pipeline
