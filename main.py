@@ -1,37 +1,64 @@
-# main.py - Sistema de Asistencia (v2.1.0)
+import subprocess
+import sys
 
-total_asistencias = 0
-historial_registros = []
+from fastapi import FastAPI
+import uvicorn
 
-def registrar_asistencia(datos_alumno: dict):
-    global total_asistencias, historial_registros
-    
-    dni_raw = datos_alumno.get("dni")
-    if not dni_raw or not isinstance(dni_raw, str):
-        print("[ERROR] El campo DNI es obligatorio")
-        return False
 
-    dni = dni_raw.strip()
-    materia = datos_alumno.get("materia", "Programación III")
-    
-    if len(dni) >= 7 and dni.isdigit():
-        total_asistencias += 1
-        registro = {"id": total_asistencias, "dni": dni, "materia": materia}
-        historial_registros.append(registro)
-        print(f"[OK] Asistencia N°{total_asistencias} | DNI: {dni} | Materia: {materia}")
-        return True
-        
-    print(f"[ERROR] Datos inválidos para DNI: {dni}")
-    return False
+def ensure_packages() -> None:
+    """Verifica e instala las dependencias necesarias en el entorno."""
+    required = ["fastapi", "uvicorn", "jinja2", "python-multipart"]
+    for pkg in required:
+        mod_name = pkg.replace("-", "_") if pkg == "python-multipart" else pkg
+        try:
+            __import__(mod_name)
+        except ImportError:
+            print(f"[SETUP] Instalando {pkg}...")
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", pkg, "-q"]
+            )
+            print(f"[SETUP] {pkg} listo.")
 
-# NUEVA FUNCIONALIDAD (Compatible hacia atrás)
-def obtener_reporte_estadistico():
+
+ensure_packages()
+
+from alumnos import router as alumnos_router  # noqa: E402
+from asistencia import router as asistencia_router  # noqa: E402
+from auth import router as auth_router  # noqa: E402
+from cursos import router as cursos_router  # noqa: E402
+from database import alumnos, asistencia_por_dia, hoy  # noqa: E402
+from docentes import router as docentes_router  # noqa: E402
+from frontend import router as frontend_router  # noqa: E402
+
+app = FastAPI(
+    title="Sistema de Asistencia Escolar",
+    description=(
+        "Registro de alumnos + control de asistencia diario "
+        "con historial inmutable"
+    ),
+    version="1.0.0",
+)
+
+app.include_router(frontend_router)
+app.include_router(auth_router)
+app.include_router(alumnos_router)
+app.include_router(docentes_router)
+app.include_router(cursos_router)
+app.include_router(asistencia_router)
+
+
+@app.get("/api")
+def api_root() -> dict:
+    """Devuelve el estado general y métricas básicas de la API."""
     return {
-        "total_asistencias": total_asistencias,
-        "detalle": historial_registros
+        "sistema": "Gestión de Asistencia",
+        "version": "1.0.0",
+        "fecha_servidor": hoy(),
+        "alumnos_registrados": len(alumnos),
+        "dias_con_asistencia": len(asistencia_por_dia),
     }
 
+
 if __name__ == "__main__":
-    print("=== SISTEMA DE ASISTENCIA v2.1.0 ===")
-    registrar_asistencia({"dni": "40123456", "materia": "Programación III"})
-    print("Reporte:", obtener_reporte_estadistico())
+    print("Iniciando Sistema de Asistencia en http://127.0.0.1:8000")
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
